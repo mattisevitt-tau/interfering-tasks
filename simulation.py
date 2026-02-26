@@ -3,7 +3,7 @@ Simulation: runs network over time and records trajectories.
 """
 
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional
 
 from multi_task_network import MultiTaskNetwork
 from core import firing_rate
@@ -23,29 +23,6 @@ class Simulation:
         self.network = network
         self.dt = dt
         self.t_max = t_max
-
-    def run_flow_ensemble(
-        self,
-        n_ics: int = 25,
-        t_max_flow: float = 20.0,
-        x0_scale: float = 15.0,
-        seed: Optional[int] = None,
-    ) -> Tuple[np.ndarray, List[List[np.ndarray]]]:
-        """
-        Run many short trajectories from random initial conditions for flow-field visualization.
-        Returns (t_flow, flow_z_by_task) where flow_z_by_task[task_idx] is a list of
-        z-trajectory arrays, each shape (n_steps, R).
-        """
-        rng = np.random.default_rng(seed)
-        flow_z_by_task = [[] for _ in self.network.tasks]
-
-        for _ in range(n_ics):
-            x0 = x0_scale * rng.standard_normal(self.network.N)
-            t_flow, _, z_traj_list = self.run(x0, t_max=t_max_flow)
-            for task_idx, z_traj in enumerate(z_traj_list):
-                flow_z_by_task[task_idx].append(z_traj)
-
-        return t_flow, flow_z_by_task
 
     def run(
         self,
