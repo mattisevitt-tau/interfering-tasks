@@ -25,6 +25,24 @@ def limit_cycle_A(mu_axis1: float, mu_axis2: float, omega: float, theta_deg: flo
     return R @ A0 @ R.T
 
 
+def _plot_flow_field(ax, A, lim, center=(0.0, 0.0), n_grid=20, use_streamplot=True):
+    A = np.asarray(A)[:2, :2]
+    cen = np.array(center)
+    x = np.linspace(-lim, lim, n_grid)
+    y = np.linspace(-lim, lim, n_grid)
+    X, Y = np.meshgrid(x, y)
+    z_display = np.stack([X.ravel(), Y.ravel()], axis=1)
+    z = z_display - cen
+    dz = (A @ z.T).T
+    dZ1 = dz[:, 0].reshape(X.shape)
+    dZ2 = dz[:, 1].reshape(Y.shape)
+    if use_streamplot:
+        ax.streamplot(X, Y, dZ1, dZ2, color=(0.5, 0.5, 0.5, 0.4), density=1.2, linewidth=0.6, zorder=0)
+    else:
+        scale = lim / (np.hypot(dZ1, dZ2).max() + 1e-12) * 0.15
+        ax.quiver(X, Y, dZ1, dZ2, color="gray", alpha=0.4, scale=scale, zorder=0)
+
+
 def _run_and_plot_single(
     ax, tc, N, R, dt, t_max, seed, x0_seed, x0_scale, color, title,
     radius_scale=1.0, center=(0.0, 0.0),
@@ -37,8 +55,9 @@ def _run_and_plot_single(
     t, _, z_traj = sim.run(x0)
     z = radius_scale * z_traj[0] + np.array(center)
     viz = Visualizer(network, sim)
-    viz.plot_trajectory(0, t, z, ax, color=color)
     lim = max(np.abs(z).max() * 1.15, 10)
+    _plot_flow_field(ax, tc.A, lim, center=center)
+    viz.plot_trajectory(0, t, z, ax, color=color)
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
     ax.set_xlabel(r"$z_1(t)$")
@@ -100,6 +119,7 @@ def run_four_panel_simulation(
     lim2 = max(np.abs(z2).max() * 1.15, 10)
     viz = Visualizer(network, sim)
 
+    _plot_flow_field(axes[1, 0], A1, lim1, center=center)
     viz.plot_trajectory(0, t, z1, axes[1, 0], color="purple")
     axes[1, 0].set_xlabel(r"$z_1^{(1)}(t)$")
     axes[1, 0].set_ylabel(r"$z_2^{(1)}(t)$")
@@ -110,6 +130,7 @@ def run_four_panel_simulation(
     axes[1, 0].axhline(0, color="k", lw=0.5)
     axes[1, 0].axvline(0, color="k", lw=0.5)
 
+    _plot_flow_field(axes[1, 1], A2, lim2, center=center)
     viz.plot_trajectory(1, t, z2, axes[1, 1], color="red")
     axes[1, 1].set_xlabel(r"$z_1^{(2)}(t)$")
     axes[1, 1].set_ylabel(r"$z_2^{(2)}(t)$")
