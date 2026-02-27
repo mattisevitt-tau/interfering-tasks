@@ -1,6 +1,8 @@
 """
 Interactive two-task CTRNN runner with Streamlit UI.
 Run: streamlit run run_interactive.py
+
+Includes Blueprint Experiments (Marschall et al. 2025).
 """
 
 import numpy as np
@@ -11,6 +13,16 @@ from task_component import TaskComponent
 from multi_task_network import MultiTaskNetwork
 from simulation import Simulation
 from visualizer import Visualizer
+from experiments import (
+    get_experiment_configs,
+    run_experiment_sweep,
+    run_scaling_experiment,
+    run_all_blueprint_experiments,
+    plot_heatmap,
+    plot_phase_portraits,
+    plot_scaling,
+    N_VALUES,
+)
 
 
 def limit_cycle_A(mu_axis1: float, mu_axis2: float, omega: float, theta_deg: float = 0.0) -> np.ndarray:
@@ -149,11 +161,16 @@ def run_four_panel_simulation(
 
 st.set_page_config(page_title="CTRNN Two-Task Runner", layout="wide")
 st.title("CTRNN Two-Task Simulation")
-st.markdown(
-    "**Top row:** single-task networks (Task 1 only, Task 2 only). "
-    "**Bottom row:** two-task network (Task 1 and Task 2 latent spaces). "
-    "Each task is a limit cycle: set μ (growth), ω (frequency), θ (rotation) and D, N, R in the sidebar."
-)
+
+tab_sim, tab_exp = st.tabs(["Interactive Simulation", "Blueprint Experiments"])
+
+# ========== Tab 1: Interactive Simulation ==========
+with tab_sim:
+    st.markdown(
+        "**Top row:** single-task networks (Task 1 only, Task 2 only). "
+        "**Bottom row:** two-task network (Task 1 and Task 2 latent spaces). "
+        "Each task is a limit cycle: set μ (growth), ω (frequency), θ (rotation) and D, N, R in the sidebar."
+    )
 
 with st.sidebar:
     st.subheader("Network")
@@ -187,39 +204,107 @@ with st.sidebar:
     t_max = st.number_input("t_max", value=100.0, step=10.0, format="%.0f")
     seed = st.number_input("Seed", value=42, step=1)
 
-if st.button("Run simulation", type="primary"):
-    A1 = limit_cycle_A(float(mu1_a), float(mu1_b), float(omega1), float(theta1_deg))
-    A2 = limit_cycle_A(float(mu2_a), float(mu2_b), float(omega2), float(theta2_deg))
-    A1_list = A1.tolist()
-    A2_list = A2.tolist()
-    center = (float(z1_center), float(z2_center))
+with tab_sim:
+    if st.button("Run simulation", type="primary", key="run_sim"):
+        A1 = limit_cycle_A(float(mu1_a), float(mu1_b), float(omega1), float(theta1_deg))
+        A2 = limit_cycle_A(float(mu2_a), float(mu2_b), float(omega2), float(theta2_deg))
+        A1_list = A1.tolist()
+        A2_list = A2.tolist()
+        center = (float(z1_center), float(z2_center))
 
-    with st.spinner("Running simulation…"):
-        fig = run_four_panel_simulation(
-            N=int(N),
-            R=int(R),
-            D1=D1,
-            D2=D2,
-            A1=A1_list,
-            A2=A2_list,
-            t_max=t_max,
-            seed=int(seed),
-            x0_scale=x0_scale,
-            radius_scale=radius_scale,
-            center=center,
-        )
-    st.pyplot(fig)
-    plt.close(fig)
+        with st.spinner("Running simulation…"):
+            fig = run_four_panel_simulation(
+                N=int(N),
+                R=int(R),
+                D1=D1,
+                D2=D2,
+                A1=A1_list,
+                A2=A2_list,
+                t_max=t_max,
+                seed=int(seed),
+                x0_scale=x0_scale,
+                radius_scale=radius_scale,
+                center=center,
+            )
+        st.pyplot(fig)
+        plt.close(fig)
 
-    st.subheader("Computed A matrices")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Task 1 — A₁**")
-        st.latex(r"A_1 = \begin{pmatrix} %.3f & %.3f \\ %.3f & %.3f \end{pmatrix}" % (A1[0,0], A1[0,1], A1[1,0], A1[1,1]))
-        st.caption("Task 1: μ(z₁)=%s, μ(z₂)=%s, ω=%s, θ=%s° → period ≈ %.2f s" % (mu1_a, mu1_b, omega1, theta1_deg, 2*np.pi/float(omega1)))
-    with col2:
-        st.markdown("**Task 2 — A₂**")
-        st.latex(r"A_2 = \begin{pmatrix} %.3f & %.3f \\ %.3f & %.3f \end{pmatrix}" % (A2[0,0], A2[0,1], A2[1,0], A2[1,1]))
-        st.caption("Task 2: μ(z₁)=%s, μ(z₂)=%s, ω=%s, θ=%s° → period ≈ %.2f s" % (mu2_a, mu2_b, omega2, theta2_deg, 2*np.pi/float(omega2)))
-else:
-    st.info("Set parameters in the sidebar and click **Run simulation**.")
+        st.subheader("Computed A matrices")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Task 1 — A₁**")
+            st.latex(r"A_1 = \begin{pmatrix} %.3f & %.3f \\ %.3f & %.3f \end{pmatrix}" % (A1[0,0], A1[0,1], A1[1,0], A1[1,1]))
+            st.caption("Task 1: μ(z₁)=%s, μ(z₂)=%s, ω=%s, θ=%s° → period ≈ %.2f s" % (mu1_a, mu1_b, omega1, theta1_deg, 2*np.pi/float(omega1)))
+        with col2:
+            st.markdown("**Task 2 — A₂**")
+            st.latex(r"A_2 = \begin{pmatrix} %.3f & %.3f \\ %.3f & %.3f \end{pmatrix}" % (A2[0,0], A2[0,1], A2[1,0], A2[1,1]))
+            st.caption("Task 2: μ(z₁)=%s, μ(z₂)=%s, ω=%s, θ=%s° → period ≈ %.2f s" % (mu2_a, mu2_b, omega2, theta2_deg, 2*np.pi/float(omega2)))
+    else:
+        st.info("Set parameters in the sidebar and click **Run simulation**.")
+
+# ========== Tab 2: Blueprint Experiments ==========
+with tab_exp:
+    st.markdown(
+        "**Blueprint experiments** (Marschall et al. 2025): Feature family sweeps, competition sweep (ΔD), "
+        "and post-processing metrics. Heatmaps, phase portraits, and scaling plots."
+    )
+    configs = get_experiment_configs()
+    family_idx = st.selectbox(
+        "Experiment family",
+        range(len(configs)),
+        format_func=lambda i: configs[i].family_name,
+        key="exp_family",
+    )
+    config = configs[family_idx]
+    exp_N = st.selectbox("N (neurons)", N_VALUES, index=0, key="exp_N")
+    viz_type = st.selectbox(
+        "Visualization",
+        ["Heatmap (ΔFeature × ΔD → S)", "Phase portraits (ΔD ∈ {-1, 0, 1})", "Scaling (sharpness vs N)"],
+        key="exp_viz",
+    )
+    exp_seed = st.number_input("Seed", value=42, step=1, key="exp_seed")
+    t_max_exp = st.number_input("t_max", value=100.0, step=10.0, key="exp_t_max")
+
+    if st.button("Run experiment", type="primary", key="run_exp"):
+        with st.spinner("Running experiment (this may take a minute)…"):
+            if viz_type == "Heatmap (ΔFeature × ΔD → S)":
+                delta_f, delta_D, S_mat = run_experiment_sweep(
+                    config, int(exp_N), t_max=t_max_exp, seed=int(exp_seed)
+                )
+                delta_label = {"Frequency (ω)": r"$\Delta\omega$", "Amplitude (γ)": r"$\Delta\gamma$", "Shape (ε)": r"$\Delta\varepsilon$"}.get(config.family_name, r"$\Delta$")
+                fig = plot_heatmap(delta_f, delta_D, S_mat, config.family_name, delta_label)
+                st.pyplot(fig)
+                plt.close(fig)
+            elif viz_type == "Phase portraits (ΔD ∈ {-1, 0, 1})":
+                fig = plot_phase_portraits(
+                    config, int(exp_N), delta_D_show=[-1.0, 0.0, 1.0],
+                    t_max=t_max_exp, seed=int(exp_seed),
+                )
+                st.pyplot(fig)
+                plt.close(fig)
+            else:
+                N_arr, slopes = run_scaling_experiment(
+                    config, N_values=N_VALUES, t_max=t_max_exp, seed=int(exp_seed)
+                )
+                fig = plot_scaling(N_arr, slopes, config.family_name)
+                st.pyplot(fig)
+                plt.close(fig)
+    else:
+        st.info("Select family, N, and visualization, then click **Run experiment**.")
+
+    st.divider()
+    st.subheader("Run all experiments")
+    st.markdown(
+        "Run the **complete blueprint suite**: all 3 families × 3 N values (200, 500, 1000). "
+        "Saves CSVs, heatmaps, phase portraits, scaling plots to `experiment_results/run_YYYYMMDD_HHMMSS/`."
+    )
+    if st.button("Run all experiments", type="secondary", key="run_all"):
+        with st.spinner("Running full experiment suite (this may take 10–20 minutes)…"):
+            from pathlib import Path
+            out_dir = run_all_blueprint_experiments(
+                output_dir=None,
+                t_max=t_max_exp,
+                seed=int(exp_seed),
+            )
+        st.success(f"All experiments complete. Results saved to: `{out_dir.resolve()}`")
+        st.code(f"ls -la {out_dir.resolve()}", language="bash")
