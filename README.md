@@ -113,18 +113,67 @@ experiment_results/run_YYYYMMDD_HHMMSS/
 - **scaling_***: Selection sharpness vs N.
 - **phase_portraits_***: z⁽¹⁾ and z⁽²⁾ for ΔD ∈ {-1, 0, 1}.
 
+## Comparison Experiments
+
+Three additional scripts explore two-task competition across different dynamical regimes, going beyond the original blueprint scenarios.
+
+### `run_comparison_experiments.py`
+
+Runs four experiments in a single pass and produces CSVs, heatmaps, S-vs-ΔD curves, sharpness plots, phase portraits, and a 4-panel summary figure:
+
+| Experiment | Description |
+|------------|-------------|
+| 1 — LC frequency | Two limit-cycle tasks with varying frequency difference Δω |
+| 2a — FP rotation | Two fixed-point tasks with varying eigenvector rotation angle θ |
+| 2b — FP coupling | Two fixed-point tasks with varying off-diagonal coupling Δb |
+| 3 — Cross-comparison | LC-vs-LC, FP-vs-FP, and mixed LC-vs-FP side by side |
+
+```bash
+python run_comparison_experiments.py [-N 500] [--t-max 100] [--seed 42] [-o comparison_results]
+```
+
+### `run_exp1_frequency.py`
+
+A deeper dive into Experiment 1 (limit-cycle frequency competition) with multi-seed averaging to reduce finite-N noise. Produces:
+
+- S vs Δω at several fixed ΔD values (with error bands)
+- S vs Δω at ΔD=0 — does frequency difference alone drive winner-take-all?
+- Frequency sensitivity dS/dΔω at Δω=0 as a function of mean connection strength D
+
+```bash
+python run_exp1_frequency.py [-N 500] [--n-seeds 5] [-o comparison_results]
+```
+
+### `run_avg_feature_maps.py`
+
+Generates seed-averaged heatmaps of S(Δfeature, ΔD) for both frequency (Δω) and coupling (Δb) differences, plus sensitivity slopes at zero feature gap:
+
+```bash
+python run_avg_feature_maps.py [--n-seeds 5] [-N 500] [-o comparison_results]
+```
+
+Key outputs in `comparison_results/most relevant result/`:
+
+- `avg_heatmap_omega.png` — S heatmap over (Δω, ΔD), averaged across seeds
+- `avg_heatmap_b.png` — S heatmap over (Δb, ΔD), averaged across seeds
+- `avg_S_at_deltaD0.png` — S vs feature difference at equal strength (ΔD=0)
+- `exp1_S_vs_delta_omega.png` — S vs Δω at multiple ΔD values with error bands
+
 ## Project Structure
 
 ```
-├── core.py              # φ(x) = erf(√π/2 · x)
-├── task_component.py    # Task (D, A), loading vectors m, n
-├── multi_task_network.py # J matrix, RK4 dynamics
-├── simulation.py        # Time integration, latent recording
-├── visualizer.py        # Trajectory plots
-├── experiments.py       # Blueprint experiments, metrics, sweeps
-├── run_interactive.py   # Streamlit UI
-├── run_all_experiments.py # CLI for full experiment suite
-├── main.py              # Marschall scenarios (Fig 2A–C)
+├── core.py                      # φ(x) = erf(√π/2 · x)
+├── task_component.py            # Task (D, A), loading vectors m, n
+├── multi_task_network.py        # J matrix, RK4 dynamics
+├── simulation.py                # Time integration, latent recording
+├── visualizer.py                # Trajectory plots
+├── experiments.py               # Blueprint experiments, metrics, sweeps
+├── run_interactive.py           # Streamlit UI
+├── run_all_experiments.py       # CLI for full experiment suite
+├── main.py                      # Marschall scenarios (Fig 2A–C)
+├── run_comparison_experiments.py # Comparison across dynamical regimes
+├── run_exp1_frequency.py        # LC frequency experiment (multi-seed)
+├── run_avg_feature_maps.py      # Averaged heatmaps and sensitivity
 └── README.md
 ```
 
