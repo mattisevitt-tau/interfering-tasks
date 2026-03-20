@@ -113,9 +113,31 @@ experiment_results/run_YYYYMMDD_HHMMSS/
 - **scaling_***: Selection sharpness vs N.
 - **phase_portraits_***: z⁽¹⁾ and z⁽²⁾ for ΔD ∈ {-1, 0, 1}.
 
+## Multi-Seed Family Deep-Dives
+
+Three scripts provide a deeper investigation of each blueprint family with multi-seed averaging (default 5 seeds) to reduce finite-N noise. Each produces:
+
+- **S vs Δ(feature)** at several fixed ΔD values, with ±1σ error bands
+- **S vs Δ(feature) at ΔD=0** — does the feature difference alone drive winner-take-all?
+- **Sensitivity dS/d(Δfeature) at Δfeature=0** as a function of mean connection strength D
+
+| Script | Family | A-matrix | Base value |
+|--------|--------|----------|------------|
+| `run_exp1_frequency.py` | Frequency (ω) | A(ω) = 0.8 [[1, ω], [-ω, 1]] | ω = 0.5 |
+| `run_exp2_amplitude.py` | Amplitude (γ) | A(γ) = γ [[1, 0.5], [-0.5, 1]] | γ = 0.8 |
+| `run_exp3_shape.py` | Shape (ε) | A(ε) = 0.8 [[ε, 0.5], [-0.5, 1/ε]] | ε = 1.0 |
+
+Run individually:
+
+```bash
+python run_exp1_frequency.py [-N 500] [--n-seeds 5] [-o comparison_results]
+python run_exp2_amplitude.py [-N 500] [--n-seeds 5] [-o comparison_results]
+python run_exp3_shape.py [-N 500] [--n-seeds 5] [-o comparison_results]
+```
+
 ## Comparison Experiments
 
-Three additional scripts explore two-task competition across different dynamical regimes, going beyond the original blueprint scenarios.
+Additional scripts explore two-task competition across different dynamical regimes, going beyond the original blueprint scenarios.
 
 ### `run_comparison_experiments.py`
 
@@ -132,32 +154,39 @@ Runs four experiments in a single pass and produces CSVs, heatmaps, S-vs-ΔD cur
 python run_comparison_experiments.py [-N 500] [--t-max 100] [--seed 42] [-o comparison_results]
 ```
 
-### `run_exp1_frequency.py`
-
-A deeper dive into Experiment 1 (limit-cycle frequency competition) with multi-seed averaging to reduce finite-N noise. Produces:
-
-- S vs Δω at several fixed ΔD values (with error bands)
-- S vs Δω at ΔD=0 — does frequency difference alone drive winner-take-all?
-- Frequency sensitivity dS/dΔω at Δω=0 as a function of mean connection strength D
-
-```bash
-python run_exp1_frequency.py [-N 500] [--n-seeds 5] [-o comparison_results]
-```
-
 ### `run_avg_feature_maps.py`
 
-Generates seed-averaged heatmaps of S(Δfeature, ΔD) for both frequency (Δω) and coupling (Δb) differences, plus sensitivity slopes at zero feature gap:
+Generates seed-averaged heatmaps of S(Δfeature, ΔD) for frequency (Δω) and coupling (Δb) differences, plus sensitivity slopes at zero feature gap:
 
 ```bash
 python run_avg_feature_maps.py [--n-seeds 5] [-N 500] [-o comparison_results]
 ```
 
-Key outputs in `comparison_results/most relevant result/`:
+## Run Everything
 
-- `avg_heatmap_omega.png` — S heatmap over (Δω, ΔD), averaged across seeds
-- `avg_heatmap_b.png` — S heatmap over (Δb, ΔD), averaged across seeds
-- `avg_S_at_deltaD0.png` — S vs feature difference at equal strength (ΔD=0)
-- `exp1_S_vs_delta_omega.png` — S vs Δω at multiple ΔD values with error bands
+A single unified runner that executes all experiments and compiles every output figure into one PDF report:
+
+```bash
+python run_everything.py [-N 500] [--n-seeds 5] [--t-max 100] [--seed 42] [-o results]
+```
+
+This runs, in order:
+
+1. **Family deep-dives** — `run_exp1_frequency`, `run_exp2_amplitude`, `run_exp3_shape`
+2. **Comparison experiments** — `run_comparison_experiments`
+3. **Averaged feature heatmaps** — `run_avg_feature_maps`
+
+All PNGs are collected into `results/full_report_<timestamp>.pdf` with section dividers and explanations.
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o` | Output directory | `results` |
+| `-N` | Network size | 500 |
+| `--n-seeds` | Seeds for multi-seed averaging | 5 |
+| `--t-max` | Simulation time per run | 100 |
+| `--dt` | RK4 timestep | 0.05 |
+| `--seed` | Base random seed | 42 |
+| `--D-mean` | Mean connection strength | 2.5 |
 
 ## Project Structure
 
@@ -171,9 +200,12 @@ Key outputs in `comparison_results/most relevant result/`:
 ├── run_interactive.py           # Streamlit UI
 ├── run_all_experiments.py       # CLI for full experiment suite
 ├── main.py                      # Marschall scenarios (Fig 2A–C)
+├── run_exp1_frequency.py        # Family 1 deep-dive (multi-seed)
+├── run_exp2_amplitude.py        # Family 2 deep-dive (multi-seed)
+├── run_exp3_shape.py            # Family 3 deep-dive (multi-seed)
 ├── run_comparison_experiments.py # Comparison across dynamical regimes
-├── run_exp1_frequency.py        # LC frequency experiment (multi-seed)
 ├── run_avg_feature_maps.py      # Averaged heatmaps and sensitivity
+├── run_everything.py            # Unified runner → PDF report
 └── README.md
 ```
 
