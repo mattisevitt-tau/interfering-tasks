@@ -197,18 +197,9 @@ def plot_slopes_vs_deltaD(path: Path, delta_D_grid: np.ndarray, slope_omega: np.
     plt.close(fig)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Averaged heatmaps and sensitivity curves")
-    parser.add_argument("-o", "--output-dir", default="comparison_results")
-    parser.add_argument("-N", type=int, default=500)
-    parser.add_argument("--n-seeds", type=int, default=5)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--dt", type=float, default=0.05)
-    parser.add_argument("--t-max", type=float, default=100.0)
-    parser.add_argument("--D-mean", type=float, default=D_MEAN)
-    args = parser.parse_args()
-
-    out_dir = Path(args.output_dir)
+def run_all(N=500, n_seeds=5, dt=0.05, t_max=100.0, base_seed=42,
+            D_mean=D_MEAN, output_dir="comparison_results"):
+    out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     omega_grid = np.linspace(-0.5, 0.5, 11)
@@ -218,9 +209,9 @@ def main():
     print("Running ω heatmap sweep...")
     S_omega, E_omega = sweep_feature_vs_deltaD(
         "omega", omega_grid, delta_D_grid,
-        N=args.N, dt=args.dt, t_max=args.t_max,
-        n_seeds=args.n_seeds, base_seed=args.seed,
-        D_mean=args.D_mean,
+        N=N, dt=dt, t_max=t_max,
+        n_seeds=n_seeds, base_seed=base_seed,
+        D_mean=D_mean,
     )
     save_matrix_csv(out_dir / "avg_heatmap_omega.csv", "delta_omega", omega_grid, delta_D_grid, S_omega, E_omega)
     plot_heatmap(
@@ -229,15 +220,15 @@ def main():
         delta_D_grid,
         S_omega,
         xlabel=r"$\Delta\omega$",
-        title=f"Average S heatmap: frequency difference (N={args.N}, seeds={args.n_seeds})",
+        title=f"Average S heatmap: frequency difference (N={N}, seeds={n_seeds})",
     )
 
     print("Running b heatmap sweep...")
     S_b, E_b = sweep_feature_vs_deltaD(
         "b", b_grid, delta_D_grid,
-        N=args.N, dt=args.dt, t_max=args.t_max,
-        n_seeds=args.n_seeds, base_seed=args.seed + 200000,
-        D_mean=args.D_mean,
+        N=N, dt=dt, t_max=t_max,
+        n_seeds=n_seeds, base_seed=base_seed + 200000,
+        D_mean=D_mean,
     )
     save_matrix_csv(out_dir / "avg_heatmap_b.csv", "delta_b", b_grid, delta_D_grid, S_b, E_b)
     plot_heatmap(
@@ -246,7 +237,7 @@ def main():
         delta_D_grid,
         S_b,
         xlabel=r"$\Delta b$",
-        title=f"Average S heatmap: coupling difference (N={args.N}, seeds={args.n_seeds})",
+        title=f"Average S heatmap: coupling difference (N={N}, seeds={n_seeds})",
     )
 
     idx_dD0 = int(np.argmin(np.abs(delta_D_grid)))
@@ -283,6 +274,21 @@ def main():
     )
 
     print("Done. Files written to:", out_dir.resolve())
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Averaged heatmaps and sensitivity curves")
+    parser.add_argument("-o", "--output-dir", default="comparison_results")
+    parser.add_argument("-N", type=int, default=500)
+    parser.add_argument("--n-seeds", type=int, default=5)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--dt", type=float, default=0.05)
+    parser.add_argument("--t-max", type=float, default=100.0)
+    parser.add_argument("--D-mean", type=float, default=D_MEAN)
+    args = parser.parse_args()
+
+    run_all(N=args.N, n_seeds=args.n_seeds, dt=args.dt, t_max=args.t_max,
+            base_seed=args.seed, D_mean=args.D_mean, output_dir=args.output_dir)
 
 
 if __name__ == "__main__":
