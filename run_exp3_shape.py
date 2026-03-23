@@ -201,7 +201,7 @@ def run_all(N=500, n_seeds=5, dt=0.05, t_max=100.0, base_seed=42,
     print(f"  Output: {out_dir.resolve()}")
     print(f"{'='*60}\n")
 
-    delta_epsilons = np.array([0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5])
+    delta_epsilons = np.array([0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.2, 1.5, 2.0])
     delta_D_show = [-1.0, -0.5, 0.0, 0.5, 1.0]
 
     # Part 1: S vs Δε
